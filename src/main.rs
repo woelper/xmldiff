@@ -2,6 +2,9 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 mod app;
 use app::TemplateApp;
+
+mod diff;
+
 #[derive(Debug, StructOpt)]
 #[structopt(name = "example", about = "An example of StructOpt usage.")]
 struct Opt {
@@ -23,6 +26,8 @@ fn main() {
     let opt = Opt::from_args();
     println!("{:?}", opt);
 
-    let app = TemplateApp::default();
-    eframe::run_native(Box::new(app));
+    diff::load(&opt.ours);
+
+    // let app = TemplateApp::default();
+    // eframe::run_native(Box::new(app));
 }
