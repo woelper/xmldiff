@@ -1,3 +1,4 @@
+#![feature(allocator_api)]
 use std::path::PathBuf;
 use structopt::StructOpt;
 mod app;
@@ -26,8 +27,11 @@ fn main() {
     let opt = Opt::from_args();
     println!("{:?}", opt);
 
-    diff::load(&opt.ours);
-
-    // let app = TemplateApp::default();
-    // eframe::run_native(Box::new(app));
+    let mut app = TemplateApp::default();
+    let x = diff::load(&opt.theirs).unwrap();
+    
+    
+    app.theirs = opt.theirs;
+    app.our_doc = x;
+    eframe::run_native(Box::new(app));
 }

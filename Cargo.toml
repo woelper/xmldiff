@@ -7,6 +7,7 @@ edition = "2018"
 
 [dependencies]
 xmltree = "*"
+treexml = "*"
 structopt = "*"
 eframe = "0.11.0" # Gives us egui, epi and web+native backends
 serde = { version = "1", features = ["derive"], optional = true }
