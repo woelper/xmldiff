@@ -89,17 +89,8 @@ impl epi::App for TemplateApp {
     
             egui::warn_if_debug_build(ui);
 
-            // for e in &our_doc.children {
-            //     ui.collapsing(&e.as_element().unwrap().name, |ui| {
+            draw_element(our_doc, ui);
 
-            //     });
-            // }
-
-            // node(&our_doc.children, ui);
-
-            draw_element(&our_doc, ui);
-
-            ui.separator();
 
    
         });
@@ -123,9 +114,19 @@ impl epi::App for TemplateApp {
 //     }
 // }
 
-fn draw_element(element: &Element, ui: &mut Ui) {
-    for (i, child) in element.children.iter().enumerate() {
-        ui.collapsing(&format!("{}##{}", &child.name, i), |ui| {
+fn draw_element(element: &mut Element, ui: &mut Ui) {
+    for child in &mut element.children {
+        let mut d = ("".to_string(), "".to_string());
+
+        // fill up default with first value pair
+        for (k,v) in &child.attributes {
+            d.0 = k.clone();
+            d.1 = v.clone();
+        }
+
+        let d_s= "".to_string();
+        
+        ui.collapsing(&format!("{} {} {} {}", &child.name, d.0, d.1,  child.text.as_ref().unwrap_or(&d_s)), |ui| {
             draw_element(child, ui);
         });
     }
