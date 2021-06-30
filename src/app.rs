@@ -1,33 +1,34 @@
-use std::{alloc::Global, path::PathBuf};
+use crate::diff::{Diff, ElementExt};
 
 use eframe::{
     egui::{self, Ui},
     epi,
 };
 use treexml::{Document, Element};
-use xmltree::XMLNode;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
-pub struct TemplateApp {
+pub struct DiffUiApp {
     // Example stuff:
     pub our_doc: Element,
     pub their_doc: Element,
+    pub diff: Diff,
 }
 
-impl Default for TemplateApp {
+impl Default for DiffUiApp {
     fn default() -> Self {
         Self {
             // Example stuff:
             our_doc: Element::new("foo"),
             their_doc: Element::new("bar"),
+            diff: Diff::new(&Element::new("foo"), &Element::new("bar")),
         }
     }
 }
 
-impl epi::App for TemplateApp {
+impl epi::App for DiffUiApp {
     fn name(&self) -> &str {
-        "egui template"
+        "xmldiff"
     }
 
     /// Called by the framework to load old app state (if any).
@@ -45,28 +46,26 @@ impl epi::App for TemplateApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        let TemplateApp {
+        let DiffUiApp {
             our_doc,
             their_doc,
+            diff,
         } = self;
 
-        egui::SidePanel::left("side_panel", 200.0).show(ctx, |ui| {
+        egui::SidePanel::left("side_panel").show(ctx, |ui| {
             ui.heading("theirs");
-            draw_element(their_doc, ui);
+            draw_element(their_doc, diff, "theirs", ui);
+            // compare(their_doc, our_doc, ui);
         });
 
-
-        egui::SidePanel::left("side_panel2", 200.0).show(ctx, |ui| {
+        egui::SidePanel::left("side_panel2").show(ctx, |ui| {
             ui.heading("ours");
-            draw_element(our_doc, ui);
+            draw_element(our_doc, diff, "ours", ui);
         });
-
-
     }
 }
 
-
-fn draw_element(element: &mut Element, ui: &mut Ui) {
+fn draw_element(element: &mut Element, diff: &Diff, suffix: &str, ui: &mut Ui) {
     for child in &mut element.children {
         let mut d = ("".to_string(), "".to_string());
 
@@ -78,17 +77,49 @@ fn draw_element(element: &mut Element, ui: &mut Ui) {
 
         let d_s = "".to_string();
 
-        ui.collapsing(
-            &format!(
-                "{} {} {} {}",
-                &child.name,
-                d.0,
-                d.1,
-                child.text.as_ref().unwrap_or(&d_s)
-            ),
-            |ui| {
-                draw_element(child, ui);
-            },
+        let name = format!(
+            "{} {} {} {} {:?} {}",
+            &child.name,
+            d.0,
+            d.1,
+            child.text.as_ref().unwrap_or(&d_s),
+            child.children.len(),
+            suffix
         );
+
+        // ui.label(format!("is id used? {}", diff.is_id_in_theirs(&child.id())));
+        ui.label(format!("path? {:?}", diff.xpath_from_id(&child.id(), "ours")));
+        // ui.label(format!("elements? {:?}", diff.elements_from_id(&child.id()).unwrap().len()));
+
+        egui::CollapsingHeader::new(&child.name)
+            .id_source(&name)
+            .show(ui, |ui| {
+                edit_element(child, ui);
+                draw_element(child, diff, suffix, ui);
+            });
     }
 }
+
+fn edit_element(element: &mut Element, ui: &mut Ui) {
+    if let Some(text) = &mut element.text {
+        ui.text_edit_singleline(text);
+
+    }
+
+    for (k, v) in &mut element.attributes {
+        ui.horizontal(|ui| {
+            ui.label(k);
+            ui.text_edit_singleline(v);
+        });
+    }
+}
+
+// fn compare(theirs: &mut Element, ours: &mut Element, ui: &mut Ui) {
+//     draw_element(theirs, ui);
+
+//     if theirs != ours {
+
+//         draw_element(ours, ui);
+//     }
+
+// }

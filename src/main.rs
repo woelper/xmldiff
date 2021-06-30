@@ -2,7 +2,7 @@
 use std::path::PathBuf;
 use structopt::StructOpt;
 mod app;
-use app::TemplateApp;
+use app::DiffUiApp;
 
 mod diff;
 
@@ -26,11 +26,20 @@ fn main() {
     let opt = Opt::from_args();
     println!("{:?}", opt);
 
-    let mut app = TemplateApp::default();
+    // init aop with default
+    let mut app = DiffUiApp::default();
     let theirs = diff::load(&opt.theirs).unwrap();
     let ours = diff::load(&opt.ours).unwrap();
 
-    app.our_doc = theirs;
-    app.their_doc = ours;
-    eframe::run_native(Box::new(app));
+    // init diff
+    let mut d = diff::Diff::default();
+    d.add_doc("theirs", theirs);
+    d.add_doc("ours", ours);
+    d.read();
+
+
+    app.diff = d;
+    let native_options = eframe::NativeOptions::default();
+
+    eframe::run_native(Box::new(app), native_options);
 }

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <catalog>
    <book id="bk101">
-      <author>Gambardellaz, Matthew</author>
+      <author>Frobisch, Matthew</author>
       <genre>Computer</genre>
       <price>44.95</price>
       <publish_date>2000-10-01</publish_date>
@@ -28,7 +28,7 @@
       society in England, the young survivors lay the 
       foundation for a new society.</description>
    </book>
-   <book id="bk104">
+   <book id="bk104" ff="sd">
       <author>Corets, Eva</author>
       <title>Oberon's Legacy</title>
       <genre>Fantasy</genre>
