@@ -1,11 +1,13 @@
 // use xmltree::{Element};
 use anyhow::{bail, Error, Result};
+use log::*;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::path::Path;
 use std::{collections::HashMap, fs::File, path::PathBuf};
 use treexml::{Document, Element};
 
-pub fn load(p: &PathBuf) -> Result<Element, Error> {
+pub fn load(p: &Path) -> Result<Element, Error> {
     let f = File::open(&p)?;
     match Document::parse(f) {
         Ok(doc) => Ok(doc.root.expect("Document has no root element")),
@@ -40,9 +42,9 @@ type Documents = HashMap<String, Element>;
 
 #[derive(Debug, Default)]
 pub struct Diff {
-    // pub theirs: Element,
-    // pub ours: Element,
-    pub documents: Documents,
+    pub theirs: Element,
+    pub ours: Element,
+    // pub documents: Documents,
     /// xpath to similar elements
     pub xpaths: HashMap<String, HashMap<String, Vec<Element>>>,
     /// id -> xpath map
@@ -58,19 +60,23 @@ pub struct Diff {
 
 // type ClashMap = HashMap<String, Clash>;
 impl Diff {
-    pub fn new(theirs: &Element, ours: &Element) -> Self {
-        Self {
-            // theirs: theirs.clone(),
-            // ours: ours.clone(),
-            documents: HashMap::default(),
+    pub fn new<P: AsRef<Path>>(ours: P, theirs: P) -> Self {
+        let theirs = self::load(&theirs.as_ref()).unwrap();
+        let ours = self::load(ours.as_ref()).unwrap();
+        let mut s = Self {
+            theirs: theirs.clone(),
+            ours: ours.clone(),
             xpaths: HashMap::default(),
             ids: HashMap::default(),
-        }
+        };
+        s.read(&ours, &theirs);
+        info!("read {:?}", s);
+        s
     }
 
-    pub fn add_doc(&mut self, name: &str, doc: Element) {
-        self.documents.insert(name.to_string(), doc);
-    }
+    // pub fn add_doc(&mut self, name: &str, doc: Element) {
+    //     self.documents.insert(name.to_string(), doc);
+    // }
 
     pub fn is_id_in_theirs(&self, id: &str, index: &str) -> bool {
         match self.elements_from_id(id, index) {
@@ -80,32 +86,37 @@ impl Diff {
     }
 
     pub fn elements_from_id(&self, id: &str, index: &str) -> Option<&Vec<Element>> {
-        self.ids.get(index)?.get(id).map(|id| self.xpaths.get(index)?.get(id)).flatten()
+        self.ids
+            .get(index)?
+            .get(id)
+            .map(|id| self.xpaths.get(index)?.get(id))
+            .flatten()
     }
 
     pub fn xpath_from_id(&self, id: &str, index: &str) -> Option<&String> {
         self.ids.get(index)?.get(id)
     }
 
-    pub fn read(&mut self) -> Option<()>{
-        let ours = self.documents.get_mut("ours")?.clone();
-        let theirs = self.documents.get_mut("theirs")?.clone();
-        self.recurse(&theirs, "", "theirs`");
-        self.recurse(&ours, "", "ours");
-        // self.recurse(self.documents.get_mut("theirs")?, "", "ours");
+    /// Read in two different Elements (root docs) and generate diff
+    /// information
+    pub fn read(&mut self, ours: &Element, theirs: &Element) -> Option<()> {
+        self.recurse(&theirs, "", "theirs")?;
+        self.recurse(&ours, "", "ours")?;
         Some(())
     }
 
     pub fn recurse(&mut self, element: &Element, parent: &str, index: &str) -> Option<()> {
         for child in &element.children {
+            info!("analyzing item {} in {}", child.name, index);
             let p = format!("{}/{}", parent, element.name);
             let path = format!("{}/{}", p, child.name);
-            let e = self.xpaths.get_mut(index)?.entry(path.clone()).or_default();
-            self.ids.get_mut(index)?.insert(child.id(), format!("{}[{}]", path, e.len()));
+            // let e = self.xpaths.get_mut(index)?.entry(path.clone()).or_default();
+            let xpath_from_index = self.xpaths.entry(index.to_string()).or_default();
+            let e = xpath_from_index.entry(path.clone()).or_default();
+            //self.ids.get_mut(index)?.insert(child.id(), format!("{}[{}]", path, e.len()));
             e.push(child.clone());
             self.recurse(child, &p, index);
         }
         Some(())
-
     }
 }

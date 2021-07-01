@@ -1,9 +1,11 @@
 #![feature(allocator_api)]
+use app::DiffUiApp;
+use env_logger;
+use log::*;
 use std::path::PathBuf;
 use structopt::StructOpt;
-mod app;
-use app::DiffUiApp;
 
+mod app;
 mod diff;
 
 #[derive(Debug, StructOpt)]
@@ -23,22 +25,19 @@ struct Opt {
 }
 
 fn main() {
+    std::env::set_var("RUST_LOG", "info");
+    let _ = env_logger::try_init();
+
     let opt = Opt::from_args();
-    println!("{:?}", opt);
+    info!("{:?}", opt);
 
     // init aop with default
     let mut app = DiffUiApp::default();
-    let theirs = diff::load(&opt.theirs).unwrap();
-    let ours = diff::load(&opt.ours).unwrap();
-
-    // init diff
-    let mut d = diff::Diff::default();
-    d.add_doc("theirs", theirs);
-    d.add_doc("ours", ours);
-    d.read();
-
-
-    app.diff = d;
+    // set up the diff
+    app.diff = diff::Diff::new(&opt.ours, &opt.theirs);
+    app.our_doc = app.diff.ours.clone();
+    app.their_doc = app.diff.theirs.clone();
+    // egui default options
     let native_options = eframe::NativeOptions::default();
 
     eframe::run_native(Box::new(app), native_options);

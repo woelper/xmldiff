@@ -12,7 +12,8 @@ structopt = "0.3.21"
 eframe = "0.13.1" # Gives us egui, epi and web+native backends
 serde = { version = "1", features = ["derive"], optional = true }
 anyhow = "1.0.40"
-
+log = ""
+env_logger = ""
 
 [features]
 default = []
