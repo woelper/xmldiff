@@ -108,14 +108,14 @@ impl Diff {
     pub fn recurse(&mut self, element: &Element, parent: &str, index: &str) -> Option<()> {
         for child in &element.children {
             info!("analyzing item {} in {}", child.name, index);
-            let p = format!("{}/{}", parent, element.name);
-            let path = format!("{}/{}", p, child.name);
+            let current_element_path = format!("{}/{}", parent, element.name);
+            let child_path = format!("{}/{}", current_element_path, child.name);
             // let e = self.xpaths.get_mut(index)?.entry(path.clone()).or_default();
-            let xpath_from_index = self.xpaths.entry(index.to_string()).or_default();
-            let e = xpath_from_index.entry(path.clone()).or_default();
+            let entry_from_index = self.xpaths.entry(index.to_string()).or_default();
+            let entry = entry_from_index.entry(child_path.clone()).or_default();
             //self.ids.get_mut(index)?.insert(child.id(), format!("{}[{}]", path, e.len()));
-            e.push(child.clone());
-            self.recurse(child, &p, index);
+            entry.push(child.clone());
+            self.recurse(child, &current_element_path, index);
         }
         Some(())
     }

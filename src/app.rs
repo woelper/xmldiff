@@ -1,11 +1,10 @@
 
 
+use std::fmt::format;
+
 use crate::diff::{Diff, ElementExt};
 
-use eframe::{
-    egui::{self, Ui},
-    epi,
-};
+use eframe::{egui::{self, Ui, Widget}, epi};
 use treexml::{Document, Element};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -67,57 +66,90 @@ impl epi::App for DiffUiApp {
             // compare(their_doc, our_doc, ui);
         });
 
-        egui::SidePanel::left("theirs").show(ctx, |ui| {
-            ui.heading("theirs");
-            draw_element(their_doc, diff, "theirs", ui);
-        });
+        // egui::SidePanel::left("theirs").show(ctx, |ui| {
+        //     ui.heading("theirs");
+        //     draw_element(their_doc, diff, "theirs", ui);
+        // });
     }
 }
 
 fn draw_element(element: &mut Element, diff: &mut Diff, suffix: &str, ui: &mut Ui) {
-    for child in &mut element.children {
-        let mut d = ("".to_string(), "".to_string());
+    
+    // egui::CollapsingHeader::new(&element.name)
+    // .id_source(format!("{:?}{}", element.attributes, element.name))
+    // .show(ui, |ui| {
 
-        // fill up default with first value pair
-        for (k, v) in &child.attributes {
-            d.0 = k.clone();
-            d.1 = v.clone();
-        }
+        // ui.label(&element.name);
 
-        let d_s = "".to_string();
 
-        let name = format!(
-            "{} {} {} {} {:?} {}",
-            &child.name,
-            d.0,
-            d.1,
-            child.text.as_ref().unwrap_or(&d_s),
-            child.children.len(),
-            suffix
-        );
+        for child in &mut element.children {
+    
+            ui.indent(format!("{:?}{}", child.attributes, child.name), |ui| {
 
-        // ui.label(format!("is id used? {}", diff.is_id_in_theirs(&child.id())));
-        // ui.label(format!("path? {:?}", diff.xpath_from_id(&child.id(), "ours")));
-        // ui.label(format!("elements? {:?}", diff.elements_from_id(&child.id()).unwrap().len()));
-
-        egui::CollapsingHeader::new(&child.name)
-            .id_source(&name)
-            .show(ui, |ui| {
-                edit_element(child, ui);
+                ui.horizontal(|ui| {
+                    ui.label(&child.name);
+                    edit_element(child, ui);
+                });
                 draw_element(child, diff, suffix, ui);
             });
+            
+            // egui::CollapsingHeader::new(&child.name)
+            // .id_source(format!("{:?}{}", child.attributes, child.name))
+            // .show(ui, |ui| {
+            //     edit_element(child, ui);
+            //     // draw_element(child, diff, suffix, ui);
+            //     draw_element(child, diff, suffix, ui);
+            // });
+        }
+    // });
+
+}
+
+
+fn val_edit(s: &mut String, ui: &mut Ui) {
+    
+    if s.len() > 20 {
+        ui.text_edit_multiline(s);
+        
+    } else {
+        if let Ok(f) = s.parse::<f32>() {
+            let mut m_f = f;
+            if egui::DragValue::new(&mut m_f).ui(ui).changed() {
+                *s = m_f.to_string();
+            }
+        } else {
+
+            ui.text_edit_singleline(s);
+        }
     }
 }
 
+
 fn edit_element(element: &mut Element, ui: &mut Ui) {
+    // Edit element's text
     if let Some(text) = &mut element.text {
-        ui.text_edit_singleline(text);
+       // ui.text_edit_singleline(text);
+       val_edit(text, ui);
+
     }
 
+    // iterate all attributes
     for (k, v) in &mut element.attributes {
         ui.horizontal(|ui| {
             ui.label(k);
-            ui.text_edit_singleline(v);
+
+            if let Ok(int) = v.parse::<i32>() {
+                let mut m_int = int;
+                egui::DragValue::new(&mut m_int).ui(ui);
+            }
+
+            if let Ok(f) = v.parse::<f32>() {
+                let mut m_f = f;
+                egui::DragValue::new(&mut m_f).ui(ui);
+            }
+
+   
+            //ui.text_edit_singleline(v);
         });
     }
 }
